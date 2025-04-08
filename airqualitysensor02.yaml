@@ -82,7 +82,7 @@ sensor:
 font:
   - file: "gfonts://Roboto"
     id: roboto_font
-    size: 16
+    size: 20
     # Allow lower 2 for CO₂
     glyphs: '"°_!%(),-.0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz₂' 
 
@@ -94,9 +94,9 @@ display:
     rotation: 0
     lambda: |-
       if (id(g_oled_is_enabled)) {
-        it.printf(0, 0, id(roboto_font), "CO₂: %.0f ppm", id(co2_reading).state);
+        it.printf(0, 0, id(roboto_font), "CO₂: %.0fppm", id(co2_reading).state);
         it.printf(0, 20, id(roboto_font), "Temp: %.1f°C", id(temp_reading).state);
-        it.printf(0, 40, id(roboto_font), "Hum:  %.1f %%", id(hum_reading).state);
+        it.printf(0, 40, id(roboto_font), "Hum:  %.1f%%", id(hum_reading).state);
       } else {
         it.fill(COLOR_OFF);
       }
