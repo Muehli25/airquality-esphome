@@ -1,0 +1,116 @@
+esphome:
+  name: airqualitysensor02
+  friendly_name: AirQualitySensor02
+  on_boot:
+    then:
+      - globals.set:
+          id: g_oled_is_enabled
+          value: "true"
+
+esp8266:
+  board: d1_mini_pro
+  framework:
+    version: recommended
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Airqualitysensor02"
+    password: "NsRWvszf2kfY"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+i2c:
+  sda: 4  # Correct these if you used different pins
+  scl: 5
+  scan: true # VERY useful for debugging - scans for I2C devices
+  id: bus_a
+
+globals:
+  - id: g_oled_is_enabled  # Choose a unique ID for the global state
+    type: bool             # Boolean type for on/off state
+    restore_value: false
+    initial_value: "true"
+
+switch:
+  - platform: template
+    name: "Enable OLED Display"    # Name for the switch in the UI
+    id: oled_enable_switch        # Optional ID for the switch itself
+    # Lambda to get the current state of the switch (reads from the global)
+    lambda: |-
+      return id(g_oled_is_enabled);
+    # Action to perform when the switch is turned ON
+    turn_on_action:
+      - globals.set:
+          id: g_oled_is_enabled
+          value: 'true'           # Set the global variable to true (enabled)
+      - logger.log: "OLED Display turned ON via switch" # Optional logging
+    # Action to perform when the switch is turned OFF
+    turn_off_action:
+      - globals.set:
+          id: g_oled_is_enabled
+          value: 'false'          # Set the global variable to false (disabled)
+      - logger.log: "OLED Display turned OFF via switch" # Optional logging
+
+sensor:
+  - platform: scd4x
+    i2c_id: bus_a
+    co2:
+      name: "CO2 Concentration"
+      id: co2_reading
+    temperature:
+      name: "Temperature"
+      id: temp_reading
+    humidity:
+      name: "Humidity"
+      id: hum_reading
+    address: 0x62  # This is the default I2C address of the SCD41.
+    update_interval: 15s # How often to read data (in seconds)
+
+# Font for the display (add more if needed)
+font:
+  - file: "gfonts://Roboto" # Example using Google Fonts
+    id: roboto_font
+    size: 16 # Adjust size as needed
+
+# OLED Display Configuration
+display:
+  - platform: ssd1306_i2c # Common driver - change if needed (e.g., sh1106_i2c)
+    model: "SH1106 128x64" # Common model - CHANGE IF YOURS IS DIFFERENT (e.g., "SH1106 128x64")
+    address: 0x3C # !!! IMPORTANT: CHANGE THIS TO YOUR OLED's ACTUAL ADDRESS !!! (Found via scan: true or documentation)
+    i2c_id: bus_a
+    rotation: 0 # Change rotation if needed (0, 90, 180, 270)
+    lambda: |-
+      if (id(g_oled_is_enabled)) {
+        // Print CO2 value
+        it.printf(0, 0, id(roboto_font), "CO2: %.0f ppm", id(co2_reading).state);
+
+        // Print Temperature value
+        it.printf(0, 20, id(roboto_font), "Temp: %.1f C", id(temp_reading).state);
+        // it.printf(0, 20, id(roboto_font), "Temp: %.1f°C", id(temp_reading).state); // Alternative with degree symbol
+
+        // Print Humidity value
+        it.printf(0, 40, id(roboto_font), "Hum:  %.1f %%", id(hum_reading).state); // Use %% for literal % sign
+      } else {
+        // Optionally clear the display when disabled
+        it.fill(COLOR_OFF);
+      }
+
